@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { formularioService } from '../services/formularioService';
+import ImagePickerComponent from '../utils/ImagePickerComponent.js';
 
 export default function FormularioScreen({ onGoBack }) {
   const [formData, setFormData] = useState({
     id_tarea: '',
-    fecha_inspeccion: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+    fecha_inspeccion: new Date().toISOString().split('T')[0],
     red_seca: '',
     red_humeda: '',
     comentario: '',
@@ -23,12 +24,12 @@ export default function FormularioScreen({ onGoBack }) {
     firma_brigada: '',
   });
   
+  const [selectedImages, setSelectedImages] = useState([]);
   const [saving, setSaving] = useState(false);
 
   const opciones = ["SI", "NO", "N/A", "OP", "NOP", "OB"];
 
   const handleSave = async () => {
-    // Validaciones básicas
     if (!formData.id_tarea.trim()) {
       Alert.alert('Error', 'El ID de tarea es requerido');
       return;
@@ -53,11 +54,14 @@ export default function FormularioScreen({ onGoBack }) {
         }
       };
 
-      const formularioId = await formularioService.guardarFormulario(formularioCompleto);
+      const formularioId = await formularioService.guardarFormulario(
+        formularioCompleto, 
+        selectedImages
+      );
       
       Alert.alert(
         'Éxito', 
-        `Formulario #${formularioId} guardado localmente`,
+        `Formulario #${formularioId} guardado con ${selectedImages.length} fotos`,
         [{ text: 'OK', onPress: () => onGoBack() }]
       );
       
@@ -69,6 +73,11 @@ export default function FormularioScreen({ onGoBack }) {
     }
   };
 
+  const handleImagesSelected = (images) => {
+    setSelectedImages(images);
+  };
+
+  // ... (resto del código de renderizado existente)
   const renderSelector = (field, label) => (
     <View style={styles.selectorContainer}>
       <Text style={styles.label}>{label}</Text>
@@ -95,7 +104,6 @@ export default function FormularioScreen({ onGoBack }) {
       </ScrollView>
     </View>
   );
-
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -106,7 +114,8 @@ export default function FormularioScreen({ onGoBack }) {
       </View>
 
       <View style={styles.formContainer}>
-        {/* ID Tarea */}
+        {/* Campos existentes del formulario */}
+                {/* ID Tarea */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>ID Tarea *</Text>
           <TextInput
@@ -179,7 +188,10 @@ export default function FormularioScreen({ onGoBack }) {
             onChangeText={(text) => setFormData({ ...formData, firma_brigada: text })}
           />
         </View>
-
+        {/* Sección de Fotos */}
+        <Text style={styles.sectionTitle}>Fotos de Evidencia</Text>
+        <ImagePickerComponent onImagesSelected={handleImagesSelected} />
+        
         {/* Botón Guardar */}
         <TouchableOpacity 
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
@@ -189,13 +201,17 @@ export default function FormularioScreen({ onGoBack }) {
           {saving ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.saveButtonText}>💾 Guardar Local</Text>
+            <Text style={styles.saveButtonText}>
+              💾 Guardar ({selectedImages.length} fotos)
+            </Text>
           )}
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
+
+// Estilos permanecen iguales
 
 const styles = StyleSheet.create({
   container: {
