@@ -8,8 +8,14 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { formularioService } from '../services/formularioService';
+import { Pressable } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+
+
+
 
 export default function FormularioScreen({ onGoBack }) {
   const [formData, setFormData] = useState({
@@ -22,13 +28,33 @@ export default function FormularioScreen({ onGoBack }) {
     firma_supervisor_area: '',
     firma_brigada: '',
   });
-  
+  const [firmaImagen, setFirmaImagen] = useState(null);
+
   const [saving, setSaving] = useState(false);
 
   const opciones = ["SI", "NO", "N/A", "OP", "NOP", "OB"];
 
+
+  const PickImage = async () => {
+      let result = await ImagePicker.launchImageLibraryAsync({
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 1,
+      });
+
+      if (!result.canceled) {
+          console.log(result.assets[0].uri);
+          console.log('funca');
+          setFirmaImagen(result.assets[0].uri);
+      }else{
+          console.log('cancelado');
+          console.log(result.assets[0].uri);
+
+      }
+  };
+
+
   const handleSave = async () => {
-    // Validaciones básicas
     if (!formData.id_tarea.trim()) {
       Alert.alert('Error', 'El ID de tarea es requerido');
       return;
@@ -37,33 +63,76 @@ export default function FormularioScreen({ onGoBack }) {
     setSaving(true);
     
     try {
-      const formularioCompleto = {
-        ...formData,
-        codigo_formulario: 'prueba',
-        nombre_formulario: 'CONTROL DE SPRINKLERS',
-        fecha_inspeccion: new Date(formData.fecha_inspeccion).toISOString(),
-        checklist: {
-          red_seca: formData.red_seca,
-          red_humeda: formData.red_humeda,
-        },
-        firmas: {
-          supervisor: formData.firma_supervisor,
-          supervisor_area: formData.firma_supervisor_area,
-          brigada: formData.firma_brigada,
-        }
-      };
+      // Crear FormData para enviar la imagen y los datos
+      const formDataToSend = new FormData();
+      
+      // Agregar todos los campos del formulario
+      formDataToSend.append('id_tarea', formData.id_tarea);
+      formDataToSend.append('fecha_inspeccion', new Date(formData.fecha_inspeccion).toISOString());
+      formDataToSend.append('red_seca', formData.red_seca);
+      formDataToSend.append('red_humeda', formData.red_humeda);
+      formDataToSend.append('comentario', formData.comentario);
+      formDataToSend.append('firma_supervisor', formData.firma_supervisor);
+      formDataToSend.append('firma_supervisor_area', formData.firma_supervisor_area);
+      formDataToSend.append('firma_brigada', formData.firma_brigada);
+      
+      // Adjuntar la imagen si existe - FORMA CORRECTA
+      if (firmaImagen) {
+        // Convertir la URI a un objeto Blob
+        const response = await fetch(firmaImagen);
+        const blob = await response.blob();
+        
+        formDataToSend.append('firma_imagen', blob, 'firma.jpg');
+      }
 
-      const formularioId = await formularioService.guardarFormulario(formularioCompleto);
+      // Enviar al servidor - USA LA IP REAL DE TU SERVIDOR
+      const response = await fetch('http://192.168.1.100:3000/api/prueba', {
+        method: 'POST',
+        body: formDataToSend,
+        // NO establezcas Content-Type manualmente, React Native lo hará automáticamente
+        // con el boundary correcto para FormData
+      });
+
+      // Verifica si la respuesta es exitosa antes de intentar parsear JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error del servidor:', errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      Alert.alert('Éxito', 'Formulario e imagen guardados en el servidor');
+      
+      // También guardar localmente
+      const formularioId = await formularioService.guardarFormulario({
+        ...formData,
+        firma_imagen: firmaImagen
+      });
       
       Alert.alert(
         'Éxito', 
-        `Formulario #${formularioId} guardado localmente`,
+        `Formulario #${formularioId} guardado localmente y en servidor`,
         [{ text: 'OK', onPress: () => onGoBack() }]
       );
       
     } catch (error) {
-      console.error('Error guardando formulario:', error);
-      Alert.alert('Error', 'No se pudo guardar el formulario');
+      console.error('Error:', error);
+      // Guardar solo localmente si falla el servidor
+      try {
+        const formularioId = await formularioService.guardarFormulario({
+          ...formData,
+          firma_imagen: firmaImagen
+        });
+        
+        Alert.alert(
+          'Guardado local', 
+          `El servidor no respondió pero el formulario #${formularioId} se guardó localmente. Error: ${error.message}`,
+          [{ text: 'OK', onPress: () => onGoBack() }]
+        );
+      } catch (localError) {
+        Alert.alert('Error', 'No se pudo guardar el formulario');
+      }
     } finally {
       setSaving(false);
     }
@@ -169,6 +238,32 @@ export default function FormularioScreen({ onGoBack }) {
             onChangeText={(text) => setFormData({ ...formData, firma_supervisor_area: text })}
           />
         </View>
+
+
+        <View style={{ marginBottom: 10 }} >
+        <Pressable onPress={PickImage}>
+          <Text>Seleccionar Imagen</Text>
+        </Pressable>
+
+        {firmaImagen && (
+          <View style={styles.imagePreviewContainer}>
+            <Text style={styles.label}>Vista previa:</Text>
+            <Image 
+              source={{ uri: firmaImagen }} 
+              style={styles.imagePreview}
+              resizeMode="contain"
+            />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setFirmaImagen(null)}
+            >
+              <Text style={styles.removeImageText}>✕ Eliminar imagen</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        </View>
+
+
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Brigada</Text>
@@ -300,6 +395,26 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+    imagePreviewContainer: {
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: 200,
+    height: 200,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginVertical: 10,
+  },
+  removeImageButton: {
+    backgroundColor: '#ff4444',
+    padding: 8,
+    borderRadius: 5,
+  },
+  removeImageText: {
+    color: 'white',
     fontWeight: 'bold',
   },
 });

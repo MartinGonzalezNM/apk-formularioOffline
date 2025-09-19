@@ -23,6 +23,7 @@ class FormularioService {
         codigo_formulario TEXT DEFAULT 'prueba',
         nombre_formulario TEXT DEFAULT 'CONTROL DE SPRINKLERS',
         fecha_inspeccion TEXT,
+        firma_imagen TEXT,
         
         -- Checklist
         red_seca TEXT CHECK(red_seca IN ('SI', 'NO', 'N/A', 'OP', 'NOP', 'OB')),
@@ -50,9 +51,9 @@ class FormularioService {
       INSERT INTO formularios_prueba (
         id_tarea, codigo_formulario, nombre_formulario, fecha_inspeccion,
         red_seca, red_humeda, comentario,
-        firma_supervisor, firma_supervisor_area, firma_brigada,
+        firma_supervisor, firma_supervisor_area, firma_brigada, firma_imagen,
         synced
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     `, [
       formularioData.id_tarea || null,
       formularioData.codigo_formulario || 'prueba',
@@ -63,7 +64,8 @@ class FormularioService {
       formularioData.comentario || null,
       formularioData.firmas?.supervisor || null,
       formularioData.firmas?.supervisor_area || null,
-      formularioData.firmas?.brigada || null
+      formularioData.firmas?.brigada || null,
+      formularioData.firma_imagen || null
     ]);
 
     return result.lastInsertRowId;
