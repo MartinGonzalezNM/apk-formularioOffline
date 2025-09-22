@@ -58,45 +58,53 @@ export const apiService = {
     }
   },
 
-  async enviarFormulario(formularioData, token) {
-    console.log('📤 Enviando formulario al servidor:', formularioData);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/formulario/prueba`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id_tarea: formularioData.id_tarea,
-          codigo_formulario: formularioData.codigo_formulario,
-          nombre_formulario: formularioData.nombre_formulario,
-          fecha_inspeccion: formularioData.fecha_inspeccion,
-          checklist: {
-            red_seca: formularioData.red_seca,
-            red_humeda: formularioData.red_humeda,
-          },
-          comentario: formularioData.comentario,
-          firmas: {
-            supervisor: formularioData.firma_supervisor,
-            supervisor_area: formularioData.firma_supervisor_area,
-            brigada: formularioData.firma_brigada,
-          }
-        }),
+async enviarFormulario(formularioData, token) {
+  try {
+    const formDataToSend = new FormData();
+
+    formDataToSend.append('id_tarea', formularioData.id_tarea);
+    formDataToSend.append('codigo_formulario', formularioData.codigo_formulario || 'prueba');
+    formDataToSend.append('nombre_formulario', formularioData.nombre_formulario || 'CONTROL DE SPRINKLERS');
+    formDataToSend.append('fecha_inspeccion', formularioData.fecha_inspeccion);
+    formDataToSend.append('red_seca', formularioData.checklist?.red_seca || '');
+    formDataToSend.append('red_humeda', formularioData.checklist?.red_humeda || '');
+    formDataToSend.append('comentario', formularioData.comentario || '');
+    formDataToSend.append('firma_supervisor', formularioData.firmas?.supervisor || '');
+    formDataToSend.append('firma_supervisor_area', formularioData.firmas?.supervisor_area || '');
+    formDataToSend.append('firma_brigada', formularioData.firmas?.brigada || '');
+
+    // 📌 adjuntar la imagen
+    if (formularioData.firma_imagen) {
+      const uri = formularioData.firma_imagen;
+      const filename = uri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename ?? '');
+      const type = match ? `image/${match[1]}` : `image`;
+
+      formDataToSend.append('firma_imagen', {
+        uri,
+        name: filename,
+        type,
       });
-
-      const data = await response.json();
-      console.log('📥 Respuesta del servidor:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al enviar formulario');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('❌ Error enviando formulario:', error);
-      throw error;
     }
+
+    const response = await fetch(`${API_BASE_URL}/formulario/prueba`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`, 
+        // ❌ NO pongas Content-Type aquí, RN lo agrega solo
+      },
+      body: formDataToSend,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.error || 'Error al enviar formulario');
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error enviando formulario:', error);
+    throw error;
   }
+}
+
 };

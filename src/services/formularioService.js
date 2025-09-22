@@ -49,9 +49,17 @@ class FormularioService {
     
     const result = await db.runAsync(`
       INSERT INTO formularios_prueba (
-        id_tarea, codigo_formulario, nombre_formulario, fecha_inspeccion,
-        red_seca, red_humeda, comentario,
-        firma_supervisor, firma_supervisor_area, firma_brigada, firma_imagen,
+        id_tarea, 
+        codigo_formulario, 
+        nombre_formulario, 
+        fecha_inspeccion,
+        red_seca, 
+        red_humeda, 
+        comentario,
+        firma_supervisor, 
+        firma_supervisor_area, 
+        firma_brigada, 
+        firma_imagen,
         synced
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     `, [

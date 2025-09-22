@@ -84,9 +84,15 @@ export default function FormularioScreen({ onGoBack }) {
         
         formDataToSend.append('firma_imagen', blob, 'firma.jpg');
       }
-
+      console.log('--------------------------------');
+      console.log('Enviando datos al servidor...');
+      console.log(formDataToSend);
+      console.log('--------------------------------');
+      console.log('firmaimgen:', firmaImagen);
+      console.log(firmaImagen.blob);
+        console.log('--------------------------------');
       // Enviar al servidor - USA LA IP REAL DE TU SERVIDOR
-      const response = await fetch('http://192.168.1.100:3000/api/prueba', {
+      const response = await fetch('http://192.168.1.243:3000/api/prueba', {
         method: 'POST',
         body: formDataToSend,
         // NO establezcas Content-Type manualmente, React Native lo hará automáticamente
@@ -127,7 +133,7 @@ export default function FormularioScreen({ onGoBack }) {
         
         Alert.alert(
           'Guardado local', 
-          `El servidor no respondió pero el formulario #${formularioId} se guardó localmente. Error: ${error.message}`,
+          `El servidor no respondió pero el formulario #${formularioId} se guardó localmente. }`,
           [{ text: 'OK', onPress: () => onGoBack() }]
         );
       } catch (localError) {
