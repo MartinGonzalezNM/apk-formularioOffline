@@ -92,7 +92,7 @@ export default function FormularioScreen({ onGoBack }) {
       console.log(firmaImagen.blob);
         console.log('--------------------------------');
       // Enviar al servidor - USA LA IP REAL DE TU SERVIDOR
-      const response = await fetch('http://192.168.1.243:3000/api/prueba', {
+      const response = await fetch('https://backend-veladero.onrender.com/api/prueba', {
         method: 'POST',
         body: formDataToSend,
         // NO establezcas Content-Type manualmente, React Native lo hará automáticamente
